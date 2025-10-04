@@ -1,0 +1,14 @@
+{
+  "name": "ai-quiz-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "start": "concurrently -n server,client -c blue,green \"npm:server\" \"npm:client\"",
+    "install-all": "npm --prefix server install && npm --prefix client install && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
