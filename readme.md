@@ -75,11 +75,16 @@ State Management:
 - Deterministic mock fallback for offline/demo.
 
 ## Environment
-Create `server/.env` (optional) for real AI:
+Create `server/.env` (optional) for AI (Gemini preferred):
 
 ```
 PORT=4000
-AI_BASE_URL=https://api.openai.com/v1
-AI_API_KEY=sk-...
-AI_MODEL=gpt-4o-mini
+# Gemini (free tier available): https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-1.5-flash
+
+# Optional OpenAI-compatible fallback (if you later wish to use it)
+# AI_BASE_URL=https://api.openai.com/v1
+# AI_API_KEY=sk-...
+# AI_MODEL=gpt-4o-mini
 ```

@@ -45,15 +45,56 @@ function buildFeedbackPrompt(topic, score) {
   ];
 }
 
-async function callAI(messages) {
+function splitSystemAndUser(messages) {
+  let systemText = '';
+  const userTexts = [];
+  for (const m of messages) {
+    if (m.role === 'system') {
+      systemText += (systemText ? '\n' : '') + m.content;
+    } else if (m.role === 'user') {
+      userTexts.push(m.content);
+    }
+  }
+  return { systemText: systemText || undefined, userText: userTexts.join('\n') };
+}
+
+async function callGemini(messages) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  if (!apiKey) return null;
+
+  const { systemText, userText } = splitSystemAndUser(messages);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const body = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: userText }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.3,
+      response_mime_type: 'application/json'
+    }
+  };
+  if (systemText) {
+    body.systemInstruction = { parts: [{ text: systemText }] };
+  }
+  try {
+    const resp = await axios.post(url, body);
+    const text = resp.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text || null;
+  } catch (e) {
+    console.error('Gemini call failed:', e?.response?.data || e.message);
+    return null;
+  }
+}
+
+async function callOpenAI(messages) {
   const baseURL = process.env.AI_BASE_URL; // compatible with OpenAI-like APIs
   const apiKey = process.env.AI_API_KEY;
   const model = process.env.AI_MODEL || 'gpt-4o-mini';
-
-  if (!baseURL || !apiKey) {
-    return null; // will fall back to mock
-  }
-
+  if (!baseURL || !apiKey) return null;
   try {
     const resp = await axios.post(
       `${baseURL}/chat/completions`,
@@ -67,9 +108,18 @@ async function callAI(messages) {
     );
     return resp.data?.choices?.[0]?.message?.content ?? null;
   } catch (e) {
-    console.error('AI call failed:', e?.response?.data || e.message);
+    console.error('OpenAI call failed:', e?.response?.data || e.message);
     return null;
   }
+}
+
+async function callAI(messages) {
+  // Prefer Gemini if available; otherwise try OpenAI-compatible; otherwise null
+  const gemini = await callGemini(messages);
+  if (gemini) return gemini;
+  const openai = await callOpenAI(messages);
+  if (openai) return openai;
+  return null;
 }
 
 function tryParseJson(text) {
